@@ -42,7 +42,11 @@ jobs:
           ./build.sh $(pwd) unused pdata 0 ${{ github.ref }}
           cp $HOME/openfpm_vars $HOME/openfpm_dependencies/openfpm_pdata/${{ github.ref }}
           cp $HOME/.openfpm.mk $HOME/openfpm_dependencies/openfpm_pdata/${{ github.ref }}
-          export DEP_PACKING=$HOME/openfpm_dependencies/openfpm_pdata/${{ github.ref }}
+          sudo mkdir -p /usr/local/openfpm
+          sudo cp $HOME/openfpm_dependencies/openfpm_pdata/${{ github.ref }} /usr/local/openfpm/dependencies
+          ./install -i /usr/local/openfpm/dependencies
+          make install
+          export DEP_PACKING=/usr/local/openfpm/dependencies
           ln -s ./LICENSE.md LICENSE.txt
           ln -s ./README.md README.txt
           cd build
@@ -109,7 +113,11 @@ jobs:
           ./build.sh $(pwd) unused pdata 0 ${{ github.ref }}
           cp $HOME/openfpm_vars $HOME/openfpm_dependencies/openfpm_pdata/${{ github.ref }}
           cp $HOME/.openfpm.mk $HOME/openfpm_dependencies/openfpm_pdata/${{ github.ref }}
-          export DEP_PACKING=$HOME/openfpm_dependencies/openfpm_pdata/${{ github.ref }}
+          sudo mkdir -p /usr/local/openfpm
+          sudo cp $HOME/openfpm_dependencies/openfpm_pdata/${{ github.ref }} /usr/local/openfpm/dependencies
+          ./install -i /usr/local/openfpm/dependencies
+          make install
+          export DEP_PACKING=/usr/local/openfpm/dependencies
           ln -s ./LICENSE.md LICENSE.txt
           ln -s ./README.md README.txt
           cd build
