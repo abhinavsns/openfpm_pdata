@@ -39,14 +39,13 @@ jobs:
         run: |
           export PATH="~/ccache-4.8-linux-x86_64/:$PATH"
           git config --global safe.directory '*'
-          ./build.sh $(pwd) unused pdata 0 ${{ github.ref }}
-          cp $HOME/openfpm_vars $HOME/openfpm_dependencies/openfpm_pdata/${{ github.ref }}
-          cp $HOME/.openfpm.mk $HOME/openfpm_dependencies/openfpm_pdata/${{ github.ref }}
-          sudo mkdir -p /usr/local/openfpm
-          sudo cp $HOME/openfpm_dependencies/openfpm_pdata/${{ github.ref }} /usr/local/openfpm/dependencies
-          ./install -i /usr/local/openfpm/dependencies
+          sudo mv $HOME/openfpm_dependencies/openfpm_pdata/${{ github.ref }} /usr/local/openfpm_dependencies
+          ./build.sh $(pwd) unused pdata 0 /usr/local/openfpm_dependencies
+          cp $HOME/openfpm_vars /usr/local/openfpm_dependencies
+          cp $HOME/.openfpm.mk /usr/local/openfpm_dependencies
+          ./install -i /usr/local/openfpm_dependencies
           make install
-          export DEP_PACKING=/usr/local/openfpm/dependencies
+          export DEP_PACKING=/usr/local/openfpm_dependencies
           ln -s ./LICENSE.md LICENSE.txt
           ln -s ./README.md README.txt
           cd build
@@ -59,6 +58,7 @@ jobs:
             exit 1
           fi
           mv openfpm_pdata-*-Linux.rpm openfpm-nightly-Linux-x86_64.rpm
+          sudo mv /usr/local/openfpm_dependencies $HOME/openfpm_dependencies/openfpm_pdata/${{ github.ref }}
       - uses: actions/cache/save@v3
         if: always()
         with:
@@ -110,14 +110,13 @@ jobs:
         run: |
           export CC=gcc-12
           export CXX=g++-12
-          ./build.sh $(pwd) unused pdata 0 ${{ github.ref }}
-          cp $HOME/openfpm_vars $HOME/openfpm_dependencies/openfpm_pdata/${{ github.ref }}
-          cp $HOME/.openfpm.mk $HOME/openfpm_dependencies/openfpm_pdata/${{ github.ref }}
-          sudo mkdir -p /usr/local/openfpm
-          sudo cp $HOME/openfpm_dependencies/openfpm_pdata/${{ github.ref }} /usr/local/openfpm/dependencies
+          sudo mv $HOME/openfpm_dependencies/openfpm_pdata/${{ github.ref }} /usr/local/openfpm_dependencies
+          ./build.sh $(pwd) unused pdata 0 /usr/local/openfpm_dependencies
+          cp $HOME/openfpm_vars /usr/local/openfpm_dependencies
+          cp $HOME/.openfpm.mk /usr/local/openfpm_dependencies
           ./install -i /usr/local/openfpm/dependencies
           make install
-          export DEP_PACKING=/usr/local/openfpm/dependencies
+          export DEP_PACKING=/usr/local/openfpm_dependencies
           ln -s ./LICENSE.md LICENSE.txt
           ln -s ./README.md README.txt
           cd build
@@ -130,6 +129,7 @@ jobs:
             exit 1
           fi
           mv openfpm_pdata-*-Darwin.pkg openfpm-nightly-Darwin-x86_64.pkg
+          sudo mv /usr/local/openfpm_dependencies $HOME/openfpm_dependencies/openfpm_pdata/${{ github.ref }}
       - uses: actions/cache/save@v3
         if: always()
         with:
