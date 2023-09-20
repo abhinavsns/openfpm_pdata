@@ -109,11 +109,11 @@ jobs:
         run: |
           export CC=gcc-12
           export CXX=g++-12
-          sudo mv $HOME/openfpm_dependencies/openfpm_pdata/${{ github.ref }} /usr/local/openfpm_dependencies  2>/dev/null || true
-          ./build.sh $(pwd) unused pdata 0 /usr/local/openfpm_dependencies
-          sudo cp $HOME/openfpm_vars /usr/local/openfpm_dependencies
-          sudo cp $HOME/.openfpm.mk /usr/local/openfpm_dependencies
-          export DEP_PACKING=/usr/local/openfpm_dependencies
+          sudo mv $HOME/openfpm_dependencies/openfpm_pdata/${{ github.ref }} /usr/local/openfpm/dependencies  2>/dev/null || true
+          ./build.sh $(pwd) unused pdata 0 /usr/local/openfpm/dependencies
+          sudo cp $HOME/openfpm_vars /usr/local/openfpm/dependencies
+          sudo cp $HOME/.openfpm.mk /usr/local/openfpm/dependencies
+          export DEP_PACKING=/usr/local/openfpm/dependencies
           ln -s ./LICENSE.md LICENSE.txt
           ln -s ./README.md README.txt
           cd build
@@ -127,7 +127,7 @@ jobs:
             exit 1
           fi
           mv openfpm_pdata-*-Darwin.pkg openfpm-nightly-Darwin-x86_64.pkg
-          sudo mv /usr/local/openfpm_dependencies $HOME/openfpm_dependencies/openfpm_pdata/${{ github.ref }}
+          sudo mv /usr/local/openfpm/dependencies $HOME/openfpm_dependencies/openfpm_pdata/${{ github.ref }}
       - uses: actions/cache/save@v3
         if: always()
         with:
