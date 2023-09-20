@@ -39,16 +39,17 @@ jobs:
         run: |
           export PATH="~/ccache-4.8-linux-x86_64/:$PATH"
           git config --global safe.directory '*'
-          sudo mv $HOME/openfpm_dependencies/openfpm_pdata/${{ github.ref }} /usr/local/openfpm_dependencies 2>/dev/null || true
-          ./build.sh $(pwd) unused pdata 0 /usr/local/openfpm_dependencies
-          cp $HOME/openfpm_vars /usr/local/openfpm_dependencies
-          cp $HOME/.openfpm.mk /usr/local/openfpm_dependencies
-          export DEP_PACKING=/usr/local/openfpm_dependencies
+          sudo mv $HOME/openfpm_dependencies/openfpm_pdata/${{ github.ref }} /usr/local/openfpm/dependencies 2>/dev/null || true
+          ./build.sh $(pwd) unused pdata 0 /usr/local/openfpm/dependencies
+          sudo cp $HOME/openfpm_vars /usr/local/openfpm/dependencies
+          sudo cp $HOME/.openfpm.mk /usr/local/openfpm/dependencies
+          export DEP_PACKING=/usr/local/openfpm/dependencies
           ln -s ./LICENSE.md LICENSE.txt
           ln -s ./README.md README.txt
           cd build
-          printf " -DCPACK_RUN_INSTALL_DEPENDENCIES=ON" >> cmake_build_options;
-          bash cmake_build_options;
+          sudo chmod 777 cmake_build_options
+          sudo -E printf " -DCPACK_RUN_INSTALL_DEPENDENCIES=ON" >> cmake_build_options;
+          sudo -E bash cmake_build_options;
           echo "Calling CPACK"
           cpack -G RPM centos
           if [ $? -ne 0 ]; then
@@ -56,7 +57,7 @@ jobs:
             exit 1
           fi
           mv openfpm_pdata-*-Linux.rpm openfpm-nightly-Linux-x86_64.rpm
-          sudo mv /usr/local/openfpm_dependencies $HOME/openfpm_dependencies/openfpm_pdata/${{ github.ref }}
+          sudo mv /usr/local/openfpm/dependencies $HOME/openfpm_dependencies/openfpm_pdata/${{ github.ref }}
       - uses: actions/cache/save@v3
         if: always()
         with:
@@ -110,16 +111,17 @@ jobs:
           export CXX=g++-12
           sudo mv $HOME/openfpm_dependencies/openfpm_pdata/${{ github.ref }} /usr/local/openfpm_dependencies  2>/dev/null || true
           ./build.sh $(pwd) unused pdata 0 /usr/local/openfpm_dependencies
-          cp $HOME/openfpm_vars /usr/local/openfpm_dependencies
-          cp $HOME/.openfpm.mk /usr/local/openfpm_dependencies
+          sudo cp $HOME/openfpm_vars /usr/local/openfpm_dependencies
+          sudo cp $HOME/.openfpm.mk /usr/local/openfpm_dependencies
           export DEP_PACKING=/usr/local/openfpm_dependencies
           ln -s ./LICENSE.md LICENSE.txt
           ln -s ./README.md README.txt
           cd build
-          printf " -DCPACK_RUN_INSTALL_DEPENDENCIES=ON" >> cmake_build_options;
-          bash cmake_build_options;
+          sudo chmod 777 cmake_build_options
+          sudo printf " -DCPACK_RUN_INSTALL_DEPENDENCIES=ON" >> cmake_build_options;
+          sudo -E bash cmake_build_options;
           echo "Calling CPACK"
-          cpack -G productbuild osx
+          sudo -E cpack -G productbuild osx
           if [ $? -ne 0 ]; then
             echo "Error creating package"
             exit 1
