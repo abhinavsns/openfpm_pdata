@@ -96,7 +96,7 @@ jobs:
       - name: Install dependencies
         run: |
           brew install cmake wget gcc gnu-sed
-          sudo chown root /usr/bin/tar && sudo chmod u+s /usr/bin/tar
+          sudo chown -R $(whoami) /usr/local/
       - uses: actions/checkout@v3
         with:
           submodules: true
