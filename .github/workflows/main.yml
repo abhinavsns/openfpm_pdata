@@ -38,8 +38,9 @@ jobs:
       - name: Build and Pack
         run: |
           export PATH="~/ccache-4.8-linux-x86_64/:$PATH"
-          git config --global safe.directory '*'
-          sudo mv $HOME/openfpm_dependencies/openfpm_pdata/${{ github.ref }} /usr/local/openfpm/dependencies 2>/dev/null || true
+          sudo -E git config --global safe.directory '*'
+          sudo -E git config --global --add safe.directory /__w/openfpm_pdata/openfpm_pdata
+          sudo -E mv $HOME/openfpm_dependencies/openfpm_pdata/${{ github.ref }} /usr/local/openfpm/dependencies 2>/dev/null || true
           sudo -E ./install -i /usr/local/openfpm/dependencies
           sudo -E cp $HOME/openfpm_vars /usr/local/openfpm/dependencies
           sudo -E cp $HOME/.openfpm.mk /usr/local/openfpm/dependencies
