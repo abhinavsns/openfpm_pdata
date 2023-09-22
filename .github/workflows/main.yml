@@ -40,7 +40,7 @@ jobs:
           export PATH="~/ccache-4.8-linux-x86_64/:$PATH"
           git config --global safe.directory '*'
           sudo mv $HOME/openfpm_dependencies/openfpm_pdata/${{ github.ref }} /usr/local/openfpm/dependencies 2>/dev/null || true
-          sudo -E ./install /usr/local/openfpm/dependencies
+          sudo -E ./install -i /usr/local/openfpm/dependencies
           sudo cp $HOME/openfpm_vars /usr/local/openfpm/dependencies
           sudo cp $HOME/.openfpm.mk /usr/local/openfpm/dependencies
           export DEP_PACKING=/usr/local/openfpm/dependencies
@@ -110,7 +110,7 @@ jobs:
           export CC=gcc-12
           export CXX=g++-12
           sudo mv $HOME/openfpm_dependencies/openfpm_pdata/${{ github.ref }} /usr/local/openfpm/dependencies  2>/dev/null || true
-          sudo -E ./install /usr/local/openfpm/dependencies
+          sudo -E ./install -i /usr/local/openfpm/dependencies
           sudo cp $HOME/openfpm_vars /usr/local/openfpm/dependencies
           sudo cp $HOME/.openfpm.mk /usr/local/openfpm/dependencies
           export DEP_PACKING=/usr/local/openfpm/dependencies
