@@ -42,7 +42,7 @@ jobs:
           export CXX=g++
           sudo -E git config --global safe.directory '*'
           sudo -E git config --global --add safe.directory /__w/openfpm_pdata/openfpm_pdata
-          sudo -E ./install -i /usr/local/openfpm/dependencies
+          sudo CC=gcc CXX=g++ ./install -i /usr/local/openfpm/dependencies
           sudo -E cp $HOME/openfpm_vars /usr/local/openfpm/dependencies
           sudo -E cp $HOME/.openfpm.mk /usr/local/openfpm/dependencies
           export DEP_PACKING=/usr/local/openfpm/dependencies
@@ -113,7 +113,7 @@ jobs:
           export CXX=g++-12
           alias gcc="gcc-12"
           alias g++="g++-12"
-          sudo -E CC=gcc-12 CXX=g++-12 ./install -i /usr/local/openfpm/dependencies
+          sudo CC=gcc-12 CXX=g++-12 ./install -i /usr/local/openfpm/dependencies
           sudo -E cp $HOME/openfpm_vars /usr/local/openfpm/dependencies
           sudo -E cp $HOME/.openfpm.mk /usr/local/openfpm/dependencies
           export DEP_PACKING=/usr/local/openfpm/dependencies
