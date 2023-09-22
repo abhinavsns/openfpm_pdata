@@ -116,7 +116,6 @@ jobs:
           alias gcc="gcc-12"
           alias g++="g++-12"
           sudo CC=gcc-12 CXX=g++-12 ./install -i /usr/local/openfpm/dependencies -s -m -c '--prefix=/usr/local/openfpm'
-          sudo make install
           sudo -E cp $HOME/openfpm_vars /usr/local/openfpm/dependencies
           sudo -E cp $HOME/.openfpm.mk /usr/local/openfpm/dependencies
           export DEP_PACKING=/usr/local/openfpm/dependencies
