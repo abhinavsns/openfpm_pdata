@@ -62,7 +62,7 @@ jobs:
       - uses: actions/cache/save@v3
         if: always()
         with:
-          path: ~/openfpm_dependencies/
+          path: /usr/local/openfpm/dependencies
           key: almalinux-dep-${{ github.ref }}
       - name: Upload Artifact
         uses: actions/upload-artifact@v2
@@ -132,7 +132,7 @@ jobs:
       - uses: actions/cache/save@v3
         if: always()
         with:
-          path: ~/openfpm_dependencies/
+          path: /usr/local/openfpm/dependencies
           key: macos-dep-${{ github.ref }}
       - name: Upload Artifact
         uses: actions/upload-artifact@v2
