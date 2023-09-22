@@ -58,7 +58,7 @@ jobs:
             echo "Error creating package"
             exit 1
           fi
-          mv openfpm_pdata-*-Linux.rpm openfpm-nightly-Linux-x86_64.rpm
+          sudo mv openfpm_pdata-*-Linux.rpm openfpm-nightly-Linux-x86_64.rpm
       - uses: actions/cache/save@v3
         if: always()
         with:
@@ -128,7 +128,7 @@ jobs:
             echo "Error creating package"
             exit 1
           fi
-          mv openfpm_pdata-*-Darwin.pkg openfpm-nightly-Darwin-x86_64.pkg
+          sudo mv openfpm_pdata-*-Darwin.pkg openfpm-nightly-Darwin-x86_64.pkg
       - uses: actions/cache/save@v3
         if: always()
         with:
