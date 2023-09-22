@@ -18,7 +18,7 @@ jobs:
           dnf -y --refresh update
           yum install -y openssh-clients cmake wget git gcc-c++ gcc-gfortran python39 bzip2 diffutils zlib-devel rpm-build sudo
           ln -s /usr/bin/python3 /usr/bin/python
-          sudo mkdir -p /usr/local/openfpm/dependencies
+          sudo chown root /bin/tar && sudo chmod u+s /bin/tar
       - uses: actions/checkout@v3
         with:
           submodules: true
@@ -95,7 +95,7 @@ jobs:
       - name: Install dependencies
         run: |
           brew install cmake wget gcc gnu-sed
-          sudo mkdir -p /usr/local/openfpm/dependencies
+          sudo chown root /bin/tar && sudo chmod u+s /bin/tar
       - uses: actions/checkout@v3
         with:
           submodules: true
