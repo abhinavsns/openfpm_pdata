@@ -26,7 +26,7 @@ jobs:
         uses: actions/cache/restore@v3
         with:
           path: /usr/local/openfpm/dependencies
-          key: almalinux-dep-${{ github.ref }}
+          key: almalinux-dep
       - name: Setup Ccache
         run: |
           wget https://github.com/ccache/ccache/releases/download/v4.8/ccache-4.8-linux-x86_64.tar.xz
@@ -108,7 +108,7 @@ jobs:
         uses: actions/cache/restore@v3
         with:
           path: /usr/local/openfpm/dependencies
-          key: macos-dep-${{ github.ref }}
+          key: macos-dep
       - name: Build & Pack
         run: |
           export CC=gcc-12
