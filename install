@@ -2,7 +2,7 @@
 
 #short_date=$(/bin/date +%m%d%y)
 #exec 2>>"install$short_date.log"
-set -x
+#set -x
 
 source script/help
 source script/discover_os
