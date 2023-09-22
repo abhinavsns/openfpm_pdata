@@ -38,9 +38,11 @@ jobs:
       - name: Build and Pack
         run: |
           export PATH="~/ccache-4.8-linux-x86_64/:$PATH"
+          export CC=gcc
+          export CXX=g++
           sudo -E git config --global safe.directory '*'
           sudo -E git config --global --add safe.directory /__w/openfpm_pdata/openfpm_pdata
-          sudo -E mv $HOME/openfpm_dependencies/openfpm_pdata/${{ github.ref }} /usr/local/openfpm/dependencies 2>/dev/null || true
+#          sudo -E mv $HOME/openfpm_dependencies/openfpm_pdata/${{ github.ref }} /usr/local/openfpm/dependencies 2>/dev/null || true
           sudo -E ./install -i /usr/local/openfpm/dependencies
           sudo -E cp $HOME/openfpm_vars /usr/local/openfpm/dependencies
           sudo -E cp $HOME/.openfpm.mk /usr/local/openfpm/dependencies
@@ -110,8 +112,10 @@ jobs:
         run: |
           export CC=gcc-12
           export CXX=g++-12
-          sudo -E mv $HOME/openfpm_dependencies/openfpm_pdata/${{ github.ref }} /usr/local/openfpm/dependencies  2>/dev/null || true
-          sudo -E ./install -i /usr/local/openfpm/dependencies
+          alias gcc="gcc-12"
+          alias g++="g++-12"
+#          sudo -E mv $HOME/openfpm_dependencies/openfpm_pdata/${{ github.ref }} /usr/local/openfpm/dependencies  2>/dev/null || true
+          sudo -E CC=gcc-12 CXX=g++-12 ./install -i /usr/local/openfpm/dependencies
           sudo -E cp $HOME/openfpm_vars /usr/local/openfpm/dependencies
           sudo -E cp $HOME/.openfpm.mk /usr/local/openfpm/dependencies
           export DEP_PACKING=/usr/local/openfpm/dependencies
