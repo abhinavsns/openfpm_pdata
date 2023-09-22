@@ -95,7 +95,7 @@ jobs:
       - name: Install dependencies
         run: |
           brew install cmake wget gcc gnu-sed
-          sudo chown root /bin/tar && sudo chmod u+s /bin/tar
+          sudo chown root:wheel /bin/tar && sudo chmod u+s /bin/tar
       - uses: actions/checkout@v3
         with:
           submodules: true
