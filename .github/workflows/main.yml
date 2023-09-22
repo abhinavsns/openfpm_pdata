@@ -95,8 +95,9 @@ jobs:
         uses: modflowpy/install-gfortran-action@v1
       - name: Install dependencies
         run: |
-          brew install cmake wget gcc gnu-sed
-          sudo chown -R $(whoami) /usr/local/
+          brew install cmake wget gcc gnu-sed gnu-tar
+          echo "/usr/local/opt/gnu-tar/libexec/gnubin" >> $GITHUB_PATH
+          sudo chown root /usr/local/opt/gnu-tar/libexec/gnubin/tar && sudo chmod u+s /usr/local/opt/gnu-tar/libexec/gnubin/tar
       - uses: actions/checkout@v3
         with:
           submodules: true
