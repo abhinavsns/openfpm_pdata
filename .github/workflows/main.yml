@@ -44,9 +44,8 @@ jobs:
           sudo -E git config --global safe.directory '*'
           sudo -E git config --global --add safe.directory /__w/openfpm_pdata/openfpm_pdata
           sudo CC=gcc CXX=g++ ./install -i /usr/local/openfpm/dependencies -s -m -c '--prefix=/usr/local/openfpm'
-          sudo make install
-          sudo -E cp $HOME/openfpm_vars /usr/local/openfpm/dependencies
-          sudo -E cp $HOME/.openfpm.mk /usr/local/openfpm/dependencies
+          sudo -E cp /root/openfpm_vars /usr/local/openfpm/dependencies
+          sudo -E cp /root/.openfpm.mk /usr/local/openfpm/dependencies
           export DEP_PACKING=/usr/local/openfpm/dependencies
           ln -s ./LICENSE.md LICENSE.txt
           ln -s ./README.md README.txt
@@ -65,7 +64,7 @@ jobs:
         if: always()
         with:
           path: /usr/local/openfpm/dependencies
-          key: almalinux-dep-${{ github.ref }}
+          key: almalinux-dep
       - name: Upload Artifact
         uses: actions/upload-artifact@v2
         with:
@@ -138,7 +137,7 @@ jobs:
         if: always()
         with:
           path: /usr/local/openfpm/dependencies
-          key: macos-dep-${{ github.ref }}
+          key: macos-dep
       - name: Upload Artifact
         uses: actions/upload-artifact@v2
         with:
