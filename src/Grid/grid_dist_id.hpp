@@ -3481,7 +3481,7 @@ public:
 	 */
 	inline void save(const std::string & filename) const
 	{
-		HDF5_writer<GRID_DIST> h5s;
+		HDF5_writer<GRID_DIST_HDF5_WR> h5s;
 
 		h5s.save(filename,loc_grid,gdb_ext);
 	}
@@ -3493,7 +3493,7 @@ public:
 	 */
 	inline void load(const std::string & filename)
 	{
-		HDF5_reader<GRID_DIST> h5l;
+		HDF5_reader<GRID_DIST_HDF5_WR> h5l;
 
 		h5l.load<device_grid>(filename,loc_grid_old,gdb_ext_old);
 

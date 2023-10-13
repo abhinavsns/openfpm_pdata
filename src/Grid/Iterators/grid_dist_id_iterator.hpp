@@ -422,6 +422,17 @@ class grid_dist_iterator
 		return grid_dist_key_dx<dim,typename device_grid::base_key>(g_c,a_it.get());
 	}
 
+    /*! \brief Get the dist key
+	 *
+	 * \return the dist key
+	 *
+	 */
+	inline grid_dist_key_dx<dim, typename device_grid::base_key> get_dist() const
+	{
+		return this->get();
+	}
+
+
 	/*! \brief it return the stop point of the iterator
 	 *
 	 * The stop point of the iterator is just the grid size
@@ -496,6 +507,10 @@ class grid_dist_iterator
 	{
 		return grid_dist_lin_dx(g_c,a_it.template getStencil<id>());
 	}
+
+
+
+
 };
 
 

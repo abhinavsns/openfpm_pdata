@@ -200,6 +200,14 @@ class grid_dist_amr<dim,St,T,AMR_IMPL_TRIVIAL,Decomposition,Memory,device_grid>
 
 public:
 
+    //! value_type
+    typedef T value_type;
+
+    //! Number of dimensions
+	static const unsigned int dims = dim;
+
+    //! Type of space
+	typedef St stype;
 
 	/*! \brief Constructor
 	 *
@@ -373,6 +381,18 @@ public:
 	 *
 	 */
 	grid_dist_id<dim,St,T,Decomposition,Memory,device_grid> & getLevel(size_t lvl)
+	{
+		return gd_array.get(lvl);
+	}
+
+    /*! \brief Get the underlying grid level
+	 *
+	 * \param lvl level
+	 *
+	 * \return the grid level
+	 *
+	 */
+	const grid_dist_id<dim,St,T,Decomposition,Memory,device_grid> & getLevel(size_t lvl) const
 	{
 		return gd_array.get(lvl);
 	}
@@ -845,7 +865,7 @@ public:
 	 * \return the number of levels
 	 *
 	 */
-	size_t getNLvl()
+	size_t getNLvl() const
 	{
 		return gd_array.size();
 	}

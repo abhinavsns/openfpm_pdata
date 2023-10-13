@@ -2736,7 +2736,7 @@ public:
 	 */
 	inline void save(const std::string & filename) const
 	{
-		HDF5_writer<VECTOR_DIST> h5s;
+		HDF5_writer<VECTOR_DIST_HDF5_WR> h5s;
 
 		h5s.save(filename,v_pos,v_prp);
 	}
@@ -2748,7 +2748,7 @@ public:
 	 */
 	inline void load(const std::string & filename)
 	{
-		HDF5_reader<VECTOR_DIST> h5l;
+		HDF5_reader<VECTOR_DIST_HDF5_WR> h5l;
 
 		h5l.load(filename,v_pos,v_prp,g_m);
 	}
