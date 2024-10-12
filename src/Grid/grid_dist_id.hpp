@@ -2926,6 +2926,68 @@ public:
 		}
 	}
 
+	/*! \brief apply a convolution using the stencil N on 3 properties
+	 *
+	 *
+	 */
+	template<unsigned int prop_src1, unsigned int prop_src2, unsigned int prop_src3,
+	         unsigned int prop_dst1, unsigned int prop_dst2, unsigned int prop_dst3,
+	         unsigned int stencil_size, unsigned int N, typename lambda_f, typename ... ArgsT >
+	void conv3(int (& stencil)[N][dim], grid_key_dx<dim> start, grid_key_dx<dim> stop, lambda_f func, ArgsT ... args)
+	{
+	    for (int i = 0 ; i < loc_grid.size() ; i++)
+	    {
+	        Box<dim,long int> inte;
+
+	        Box<dim,long int> base;
+	        for (int j = 0 ; j < dim ; j++)
+	        {
+	            base.setLow(j,(long int)start.get(j) - (long int)gdb_ext.get(i).origin.get(j));
+	            base.setHigh(j,(long int)stop.get(j) - (long int)gdb_ext.get(i).origin.get(j));
+	        }
+
+	        Box<dim,long int> dom = gdb_ext.get(i).Dbox;
+
+	        bool overlap = dom.Intersect(base,inte);
+
+	        if (overlap == true)
+	        {
+	            loc_grid.get(i).template conv3<prop_src1,prop_src2,prop_src3,prop_dst1,prop_dst2,prop_dst3,stencil_size>(stencil,inte.getKP1(),inte.getKP2(),func,create_vcluster().rank(),args...);
+	        }
+	    }
+	}
+
+		/*! \brief apply a convolution using the stencil N on 3 properties
+	 *
+	 *
+	 */
+	template<unsigned int prop_src1, unsigned int prop_src2, unsigned int prop_src3, unsigned int prop_src4,
+	         unsigned int prop_dst1, unsigned int prop_dst2, unsigned int prop_dst3, unsigned int prop_dst4,
+	         unsigned int stencil_size, unsigned int N, typename lambda_f, typename ... ArgsT >
+	void conv4(int (& stencil)[N][dim], grid_key_dx<dim> start, grid_key_dx<dim> stop, lambda_f func, ArgsT ... args)
+	{
+	    for (int i = 0 ; i < loc_grid.size() ; i++)
+	    {
+	        Box<dim,long int> inte;
+
+	        Box<dim,long int> base;
+	        for (int j = 0 ; j < dim ; j++)
+	        {
+	            base.setLow(j,(long int)start.get(j) - (long int)gdb_ext.get(i).origin.get(j));
+	            base.setHigh(j,(long int)stop.get(j) - (long int)gdb_ext.get(i).origin.get(j));
+	        }
+
+	        Box<dim,long int> dom = gdb_ext.get(i).Dbox;
+
+	        bool overlap = dom.Intersect(base,inte);
+
+	        if (overlap == true)
+	        {
+	            loc_grid.get(i).template conv4<prop_src1,prop_src2,prop_src3,prop_src4,prop_dst1,prop_dst2,prop_dst3,prop_dst4,stencil_size>(stencil,inte.getKP1(),inte.getKP2(),func,create_vcluster().rank(),args...);
+	        }
+	    }
+	}
+
 	/*! \brief apply a convolution using the stencil N
 	 *
 	 *
@@ -2953,6 +3015,68 @@ public:
 				loc_grid.get(i).template conv2<prop_src1,prop_src2,prop_dst1,prop_dst2,stencil_size>(stencil,inte.getKP1(),inte.getKP2(),func,create_vcluster().rank(),args...);
 			}
 		}
+	}
+
+	/*! \brief apply a convolution on 3 properties on GPU
+	 *
+	 *
+	 */
+	template<unsigned int prop_src1, unsigned int prop_src2, unsigned int prop_src3,
+	         unsigned int prop_dst1, unsigned int prop_dst2, unsigned int prop_dst3,
+	         unsigned int stencil_size, typename lambda_f, typename ... ArgsT >
+	void conv3(grid_key_dx<dim> start, grid_key_dx<dim> stop, lambda_f func, ArgsT ... args)
+	{
+	    for (int i = 0 ; i < loc_grid.size() ; i++)
+	    {
+	        Box<dim,long int> inte;
+
+	        Box<dim,long int> base;
+	        for (int j = 0 ; j < dim ; j++)
+	        {
+	            base.setLow(j,(long int)start.get(j) - (long int)gdb_ext.get(i).origin.get(j));
+	            base.setHigh(j,(long int)stop.get(j) - (long int)gdb_ext.get(i).origin.get(j));
+	        }
+
+	        Box<dim,long int> dom = gdb_ext.get(i).Dbox;
+
+	        bool overlap = dom.Intersect(base,inte);
+
+	        if (overlap == true)
+	        {
+	            loc_grid.get(i).template conv3<prop_src1,prop_src2,prop_src3,prop_dst1,prop_dst2,prop_dst3,stencil_size>(inte.getKP1(),inte.getKP2(),func,args...);
+	        }
+	    }
+	}
+
+		/*! \brief apply a convolution on 3 properties on GPU
+	 *
+	 *
+	 */
+	template<unsigned int prop_src1, unsigned int prop_src2, unsigned int prop_src3, unsigned int prop_src4,
+	         unsigned int prop_dst1, unsigned int prop_dst2, unsigned int prop_dst3, unsigned int prop_dst4,
+	         unsigned int stencil_size, typename lambda_f, typename ... ArgsT >
+	void conv4(grid_key_dx<dim> start, grid_key_dx<dim> stop, lambda_f func, ArgsT ... args)
+	{
+	    for (int i = 0 ; i < loc_grid.size() ; i++)
+	    {
+	        Box<dim,long int> inte;
+
+	        Box<dim,long int> base;
+	        for (int j = 0 ; j < dim ; j++)
+	        {
+	            base.setLow(j,(long int)start.get(j) - (long int)gdb_ext.get(i).origin.get(j));
+	            base.setHigh(j,(long int)stop.get(j) - (long int)gdb_ext.get(i).origin.get(j));
+	        }
+
+	        Box<dim,long int> dom = gdb_ext.get(i).Dbox;
+
+	        bool overlap = dom.Intersect(base,inte);
+
+	        if (overlap == true)
+	        {
+	            loc_grid.get(i).template conv4<prop_src1,prop_src2,prop_src3,prop_src4,prop_dst1,prop_dst2,prop_dst3,prop_dst4,stencil_size>(inte.getKP1(),inte.getKP2(),func,args...);
+	        }
+	    }
 	}
 
 	/*! \brief apply a convolution on 2 property on GPU
