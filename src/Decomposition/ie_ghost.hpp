@@ -984,8 +984,12 @@ public:
 		ids_p.clear();
 
 		// Check with geo-cell if a particle is inside one Cell containing boxes
+		int cellID = geo_cell.getCell(p);
 
-		auto cell_it = geo_cell.getParticleInCellIterator(geo_cell.getCell(p));
+		if (cellID == -1)
+			return ids_p;
+
+		auto cell_it = geo_cell.getParticleInCellIterator(cellID);
 
 		// For each element in the cell, check if the point is inside the box
 		// if it is, store the processor id
@@ -1034,7 +1038,12 @@ public:
 
 		// Check with geo-cell if a particle is inside one Cell containing boxes
 
-		auto cell_it = geo_cell.getParticleInCellIterator(geo_cell.getCell(p));
+		int cellID = geo_cell.getCell(p);
+
+		if (cellID == -1)
+			return ids;
+
+		auto cell_it = geo_cell.getParticleInCellIterator(cellID);
 
 		// For each element in the cell, check if the point is inside the box
 		// if it is, store the processor id
@@ -1078,7 +1087,12 @@ public:
 
 		// Check with geo-cell if a particle is inside one Cell containing boxes
 
-		auto cell_it = geo_cell.getParticleInCellIterator(geo_cell.getCell(p));
+		int cellID = geo_cell.getCell(p);
+
+		if (cellID == -1)
+			return ids_p;
+
+		auto cell_it = geo_cell.getParticleInCellIterator(cellID);
 
 		// For each element in the cell, check if the point is inside the box
 		// if it is, store the processor id
@@ -1121,7 +1135,12 @@ public:
 
 		// Check with geo-cell if a particle is inside one Cell containing boxes
 
-		auto cell_it = geo_cell.getParticleInCellIterator(geo_cell.getCell(p));
+		int cellID = geo_cell.getCell(p);
+
+		if (cellID == -1)
+			return ids;
+
+		auto cell_it = geo_cell.getParticleInCellIterator(cellID);
 
 		// For each element in the cell, check if the point is inside the box
 		// if it is, store the processor id

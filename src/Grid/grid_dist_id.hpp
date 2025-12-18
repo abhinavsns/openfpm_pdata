@@ -1308,6 +1308,17 @@ public:
 		return domain;
 	}
 
+
+	/*! \brief Get the local grid
+	 *
+	 * \return a reference to the local grid
+	 *
+	 */
+	openfpm::vector<device_grid>& getLocalGrid() {
+		return loc_grid;
+	}
+
+
 	/*! \brief Get the point where it start the origin of the grid of the sub-domain i
 	 *
 	 * \param i sub-domain
