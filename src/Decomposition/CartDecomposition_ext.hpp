@@ -34,7 +34,7 @@ class CartDecomposition;
  *
  *
  * ### Create a Cartesian decomposition object on a Box space, distribute, calculate internal and external ghost boxes
- * \snippet CartDecomposition_unit_test.hpp Create CartDecomposition
+ * \snippet CartDecomposition_unit_test.cpp Create CartDecomposition
  *
  */
 
