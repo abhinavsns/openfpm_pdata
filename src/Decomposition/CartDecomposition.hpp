@@ -132,7 +132,7 @@ template<unsigned int dim> static void nsub_to_div(size_t (& div)[dim], size_t n
  *
  * ### Create a Cartesian decomposition object on a Box space, distribute, calculate internal and external ghost boxes
  *
- * \snippet CartDecomposition_unit_test.hpp Create CartDecomposition
+ * \snippet CartDecomposition_unit_test.cpp Create CartDecomposition
  *
  */
 
