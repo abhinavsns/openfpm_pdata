@@ -278,6 +278,78 @@ target_include_directories (ofpm_pdata_dl PUBLIC ${Boost_INCLUDE_DIRS})
 
 target_compile_definitions(pdata PRIVATE ${MPI_VENDOR})
 
+# The Metal backend keeps the public vector_dist/grid/decomposition API and
+# translates the existing HIP/CUDA test translation units.  HIP clang emits
+# both the ordinary arm64 host object (including its compiler kernel handles)
+# and LLVM device IR; openfpm_add_moltenvk_kernels lowers the latter to
+# embedded SPIR-V and adds its registrar to the same pdata executable.
+if (CUDA_ON_BACKEND STREQUAL "METAL")
+	set_property(TARGET pdata PROPERTY CXX_STANDARD 17)
+	set_property(TARGET pdata PROPERTY CXX_STANDARD_REQUIRED ON)
+	target_compile_definitions(pdata PRIVATE CUDIFY_USE_METAL CUDA_GPU)
+	target_include_directories(pdata PRIVATE ${VULKAN_INCLUDE_DIR})
+	target_link_libraries(pdata ${MOLTENVK_LIBRARY}
+		"-framework Foundation" "-framework QuartzCore" "-framework Metal"
+		"-framework IOSurface")
+
+	include("${CMAKE_CURRENT_SOURCE_DIR}/../../openfpm_devices/cmake/OpenFPMMoltenVK.cmake")
+	set(_openfpm_pdata_mpi_includes ${MPI_C_INCLUDE_DIRS}
+		${MPI_CXX_INCLUDE_DIRS} ${MPI_C_COMPILER_INCLUDE_DIRS}
+		${MPI_CXX_COMPILER_INCLUDE_DIRS})
+	if (TARGET MPI::MPI_CXX)
+		get_target_property(_openfpm_pdata_mpi_target_includes MPI::MPI_CXX
+			INTERFACE_INCLUDE_DIRECTORIES)
+		if (_openfpm_pdata_mpi_target_includes)
+			list(APPEND _openfpm_pdata_mpi_includes
+				${_openfpm_pdata_mpi_target_includes})
+		endif()
+	endif()
+	# MPI wrapper compilers often keep their system include path implicit, but
+	# the separate HIP clang invocation needs that path explicitly.
+	if (MPI_CXX_COMPILER)
+		execute_process(COMMAND "${MPI_CXX_COMPILER}" --showme:incdirs
+			OUTPUT_VARIABLE _openfpm_pdata_mpi_wrapper_include_text
+			OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET
+			RESULT_VARIABLE _openfpm_pdata_mpi_wrapper_result)
+		if (_openfpm_pdata_mpi_wrapper_result EQUAL 0 AND
+			NOT _openfpm_pdata_mpi_wrapper_include_text STREQUAL "")
+			separate_arguments(_openfpm_pdata_mpi_wrapper_includes UNIX_COMMAND
+				"${_openfpm_pdata_mpi_wrapper_include_text}")
+			list(APPEND _openfpm_pdata_mpi_includes
+				${_openfpm_pdata_mpi_wrapper_includes})
+		endif()
+	endif()
+	list(REMOVE_DUPLICATES _openfpm_pdata_mpi_includes)
+	set(_openfpm_pdata_moltenvk_includes
+		"${CMAKE_CURRENT_SOURCE_DIR}"
+		"${CMAKE_CURRENT_SOURCE_DIR}/../../openfpm_devices/src"
+		"${CMAKE_CURRENT_SOURCE_DIR}/../../openfpm_vcluster/src"
+		"${CMAKE_CURRENT_SOURCE_DIR}/../../openfpm_data/src"
+		"${CMAKE_CURRENT_SOURCE_DIR}/../../openfpm_io/src"
+		"${CMAKE_BINARY_DIR}/config"
+		"${PARMETIS_ROOT}/include" "${METIS_ROOT}/include"
+		"${HDF5_ROOT}/include" ${LIBHILBERT_INCLUDE_DIRS}
+		${PETSC_INCLUDES} ${Vc_INCLUDE_DIR}
+		${Boost_INCLUDE_DIRS} ${_openfpm_pdata_mpi_includes}
+		"${VULKAN_INCLUDE_DIR}")
+	if (ALPAKA_ROOT)
+		list(APPEND _openfpm_pdata_moltenvk_includes
+			"${ALPAKA_ROOT}/include")
+	endif()
+	foreach(_openfpm_pdata_cuda_source IN LISTS CUDA_SOURCES)
+		openfpm_add_moltenvk_kernels(
+			TARGET pdata
+			SOURCE "${_openfpm_pdata_cuda_source}"
+			HIP_CLANG "${OPENFPM_MOLTENVK_HIP_CLANG}"
+			LLVM_OPT "${OPENFPM_MOLTENVK_LLVM_OPT}"
+			CLSPV "${OPENFPM_MOLTENVK_CLSPV}"
+			CHIPSTAR_ROOT "${OPENFPM_CHIPSTAR_ROOT}"
+			CHIPSTAR_GENERATED_INCLUDE "${OPENFPM_CHIPSTAR_GENERATED_INCLUDE}"
+			COMPILE_DEFINITIONS CUDIFY_USE_METAL CUDA_GPU ${MPI_VENDOR}
+			INCLUDE_DIRECTORIES ${_openfpm_pdata_moltenvk_includes})
+	endforeach()
+endif()
+
 if(PETSC_FOUND)
 	target_link_libraries(pdata ${PETSC_LIBRARIES})
 endif()

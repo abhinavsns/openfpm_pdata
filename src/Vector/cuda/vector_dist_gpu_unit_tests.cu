@@ -1,6 +1,7 @@
 #define BOOST_TEST_DYN_LINK
 #include "config.h"
 #include <boost/test/unit_test.hpp>
+#include <limits>
 #include "VCluster/VCluster.hpp"
 #include <Vector/vector_dist.hpp>
 #include "Vector/tests/vector_dist_util_unit_tests.hpp"
@@ -20,6 +21,16 @@ __global__ void move_parts_gpu_test(vector_dist_type vecDist)
 }
 
 BOOST_AUTO_TEST_SUITE( vector_dist_gpu_test )
+
+// Apple GPUs expose no native fp64 arithmetic.  Instantiate the existing
+// vector_dist GPU catalogue with float for Metal while retaining its original
+// double instantiation on CUDA and HIP.  This is deliberately a test scalar
+// choice: the production container and launch paths stay backend-independent.
+#ifdef CUDIFY_USE_METAL
+using vector_dist_gpu_test_real = float;
+#else
+using vector_dist_gpu_test_real = double;
+#endif
 
 void print_test(std::string test, size_t sz)
 {
@@ -884,7 +895,12 @@ void vdist_calc_gpu_test()
 BOOST_AUTO_TEST_CASE( vector_dist_map_on_gpu_test)
 {
 	vdist_calc_gpu_test<float>();
+#ifndef CUDIFY_USE_METAL
+	// Apple Metal GPUs do not provide native fp64 arithmetic.  Keep the existing
+	// CUDA/HIP double coverage while exercising the same unmodified map kernels
+	// with their native float instantiation on the Metal backend.
 	vdist_calc_gpu_test<double>();
+#endif
 }
 
 BOOST_AUTO_TEST_CASE(vector_dist_reduce)
@@ -902,12 +918,17 @@ BOOST_AUTO_TEST_CASE(vector_dist_reduce)
 	// Boundary conditions
 	size_t bc[3]={PERIODIC,PERIODIC,PERIODIC};
 
-	vector_dist_gpu<3,float,aggregate<float,double,int,size_t>> vecDist(5000*vCluster.size(),domain,bc,g);
+#ifdef CUDIFY_USE_METAL
+	using second_reduce_type = float;
+#else
+	using second_reduce_type = double;
+#endif
+	vector_dist_gpu<3,float,aggregate<float,second_reduce_type,int,size_t>> vecDist(5000*vCluster.size(),domain,bc,g);
 
 	auto it = vecDist.getDomainIterator();
 
 	float fc = 1.0;
-	double dc = 1.0;
+	second_reduce_type dc = 1.0;
 	int ic = 1.0;
 	size_t sc = 1.0;
 
@@ -931,7 +952,7 @@ BOOST_AUTO_TEST_CASE(vector_dist_reduce)
 	vecDist.template hostToDeviceProp<0,1,2,3>();
 
 	float redf = reduce_local<0,_add_>(vecDist);
-	double redd = reduce_local<1,_add_>(vecDist);
+	second_reduce_type redd = reduce_local<1,_add_>(vecDist);
 	int redi = reduce_local<2,_add_>(vecDist);
 	size_t reds = reduce_local<3,_add_>(vecDist);
 
@@ -941,7 +962,7 @@ BOOST_AUTO_TEST_CASE(vector_dist_reduce)
 	BOOST_REQUIRE_EQUAL(reds,(vecDist.size_local()+1)*(vecDist.size_local())/2);
 
 	float redf2 = reduce_local<0,_max_>(vecDist);
-	double redd2 = reduce_local<1,_max_>(vecDist);
+	second_reduce_type redd2 = reduce_local<1,_max_>(vecDist);
 	int redi2 = reduce_local<2,_max_>(vecDist);
 	size_t reds2 = reduce_local<3,_max_>(vecDist);
 
@@ -952,7 +973,7 @@ BOOST_AUTO_TEST_CASE(vector_dist_reduce)
 }
 
 template<typename CellList_type, bool sorted>
-void vector_dist_dlb_on_cuda_impl(size_t k,double r_cut)
+void vector_dist_dlb_on_cuda_impl(size_t k,vector_dist_gpu_test_real r_cut)
 {
 	std::random_device r;
 
@@ -966,17 +987,19 @@ void vector_dist_dlb_on_cuda_impl(size_t k,double r_cut)
     					/*r() +*/ create_vcluster().rank()};
     std::mt19937 e2(seed2);
 
-	typedef vector_dist_gpu<3,double,aggregate<double,double[3],double[3]>> vector_type;
+	typedef vector_dist_gpu<3,vector_dist_gpu_test_real,
+		aggregate<vector_dist_gpu_test_real,vector_dist_gpu_test_real[3],
+		vector_dist_gpu_test_real[3]>> vector_type;
 
 	Vcluster<> & vCluster = create_vcluster();
 
 	if (vCluster.getProcessingUnits() > 8)
 		return;
 
-	std::uniform_real_distribution<double> unif(0.0,0.3);
+	std::uniform_real_distribution<vector_dist_gpu_test_real> unif(0.0,0.3);
 
-	Box<3,double> domain({0.0,0.0,0.0},{1.0,1.0,1.0});
-	Ghost<3,double> g(0.1);
+	Box<3,vector_dist_gpu_test_real> domain({0.0,0.0,0.0},{1.0,1.0,1.0});
+	Ghost<3,vector_dist_gpu_test_real> g(0.1);
 	size_t bc[3] = {PERIODIC,PERIODIC,PERIODIC};
 
 	vector_type vecDist(0,domain,bc,g,DEC_GRAN(2048));
@@ -1053,7 +1076,7 @@ void vector_dist_dlb_on_cuda_impl(size_t k,double r_cut)
 
 	BOOST_REQUIRE(vecDist.size_local() != 0);
 
-	Point<3,double> v({1.0,1.0,1.0});
+	Point<3,vector_dist_gpu_test_real> v({1.0,1.0,1.0});
 
 	for (size_t i = 0 ; i < 25 ; i++)
 	{
@@ -1102,7 +1125,15 @@ void vector_dist_dlb_on_cuda_impl(size_t k,double r_cut)
 			compareCellListCpuGpu(vecDist,cellListGPU,cellList);
 		}
 
+#ifdef CUDIFY_USE_METAL
+		// Repeated float translations can move a pair a few ULPs across the
+		// cutoff even though the corresponding double-precision test is stable.
+		const auto cutoff_tolerance = 64 * std::numeric_limits<vector_dist_gpu_test_real>::epsilon();
+		auto VV2_lower = vecDist.getVerlet(r_cut-cutoff_tolerance);
+		auto VV2_upper = vecDist.getVerlet(r_cut+cutoff_tolerance);
+#else
 		auto VV2 = vecDist.getVerlet(r_cut);
+#endif
 
 		auto it2 = vecDist.getDomainIterator();
 
@@ -1111,7 +1142,13 @@ void vector_dist_dlb_on_cuda_impl(size_t k,double r_cut)
 		{
 			auto p = it2.get();
 
-			match &= vecDist.template getProp<0>(p) == VV2.getNNPart(p.getKey());
+			auto actual = vecDist.template getProp<0>(p);
+#ifdef CUDIFY_USE_METAL
+			match &= actual >= VV2_lower.getNNPart(p.getKey());
+			match &= actual <= VV2_upper.getNNPart(p.getKey());
+#else
+			match &= actual == VV2.getNNPart(p.getKey());
+#endif
 
 			++it2;
 		}
@@ -1151,7 +1188,8 @@ void vector_dist_dlb_on_cuda_impl(size_t k,double r_cut)
 }
 
 template<typename CellList_type, bool sorted>
-void vector_dist_dlb_on_cuda_impl_async(size_t k,double r_cut)
+void vector_dist_dlb_on_cuda_impl_async(size_t k,
+	vector_dist_gpu_test_real r_cut)
 {
 	std::random_device r;
 
@@ -1165,17 +1203,19 @@ void vector_dist_dlb_on_cuda_impl_async(size_t k,double r_cut)
     					r() + create_vcluster().rank()};
     std::mt19937 e2(seed2);
 
-	typedef vector_dist_gpu<3,double,aggregate<double,double[3],double[3]>> vector_type;
+	typedef vector_dist_gpu<3,vector_dist_gpu_test_real,
+		aggregate<vector_dist_gpu_test_real,vector_dist_gpu_test_real[3],
+		vector_dist_gpu_test_real[3]>> vector_type;
 
 	Vcluster<> & vCluster = create_vcluster();
 
 	if (vCluster.getProcessingUnits() > 8)
 		return;
 
-	std::uniform_real_distribution<double> unif(0.0,0.3);
+	std::uniform_real_distribution<vector_dist_gpu_test_real> unif(0.0,0.3);
 
-	Box<3,double> domain({0.0,0.0,0.0},{1.0,1.0,1.0});
-	Ghost<3,double> g(0.1);
+	Box<3,vector_dist_gpu_test_real> domain({0.0,0.0,0.0},{1.0,1.0,1.0});
+	Ghost<3,vector_dist_gpu_test_real> g(0.1);
 	size_t bc[3] = {PERIODIC,PERIODIC,PERIODIC};
 
 	vector_type vecDist(0,domain,bc,g,DEC_GRAN(2048));
@@ -1253,7 +1293,7 @@ void vector_dist_dlb_on_cuda_impl_async(size_t k,double r_cut)
 
 	BOOST_REQUIRE(vecDist.size_local() != 0);
 
-	Point<3,double> v({1.0,1.0,1.0});
+	Point<3,vector_dist_gpu_test_real> v({1.0,1.0,1.0});
 
 	for (size_t i = 0 ; i < 25 ; i++)
 	{
@@ -1302,7 +1342,15 @@ void vector_dist_dlb_on_cuda_impl_async(size_t k,double r_cut)
 			compareCellListCpuGpu(vecDist,cellListGPU,cellList);
 		}
 
+#ifdef CUDIFY_USE_METAL
+		// Repeated float translations can move a pair a few ULPs across the
+		// cutoff even though the corresponding double-precision test is stable.
+		const auto cutoff_tolerance = 64 * std::numeric_limits<vector_dist_gpu_test_real>::epsilon();
+		auto VV2_lower = vecDist.getVerlet(r_cut-cutoff_tolerance);
+		auto VV2_upper = vecDist.getVerlet(r_cut+cutoff_tolerance);
+#else
 		auto VV2 = vecDist.getVerlet(r_cut);
+#endif
 
 		auto it2 = vecDist.getDomainIterator();
 
@@ -1311,7 +1359,13 @@ void vector_dist_dlb_on_cuda_impl_async(size_t k,double r_cut)
 		{
 			auto p = it2.get();
 
-			match &= vecDist.template getProp<0>(p) == VV2.getNNPart(p.getKey());
+			auto actual = vecDist.template getProp<0>(p);
+#ifdef CUDIFY_USE_METAL
+			match &= actual >= VV2_lower.getNNPart(p.getKey());
+			match &= actual <= VV2_upper.getNNPart(p.getKey());
+#else
+			match &= actual == VV2.getNNPart(p.getKey());
+#endif
 
 			++it2;
 		}
@@ -1349,32 +1403,38 @@ void vector_dist_dlb_on_cuda_impl_async(size_t k,double r_cut)
 
 BOOST_AUTO_TEST_CASE(vector_dist_dlb_on_cuda_async)
 {
-	vector_dist_dlb_on_cuda_impl_async<CellList_gpu<3,double,CudaMemory,shift_only<3,double>,false>, false>(50000,0.01);
+	vector_dist_dlb_on_cuda_impl_async<CellList_gpu<3,vector_dist_gpu_test_real,
+		CudaMemory,shift_only<3,vector_dist_gpu_test_real>,false>, false>(50000,0.01);
 }
 
 BOOST_AUTO_TEST_CASE(vector_dist_dlb_on_cuda_async_sorted)
 {
-	vector_dist_dlb_on_cuda_impl_async<CellList_gpu<3,double,CudaMemory,shift_only<3,double>,false>, true>(50000,0.01);
+	vector_dist_dlb_on_cuda_impl_async<CellList_gpu<3,vector_dist_gpu_test_real,
+		CudaMemory,shift_only<3,vector_dist_gpu_test_real>,false>, true>(50000,0.01);
 }
 
 BOOST_AUTO_TEST_CASE(vector_dist_dlb_on_cuda)
 {
-	vector_dist_dlb_on_cuda_impl<CellList_gpu<3,double,CudaMemory,shift_only<3,double>,false>, false>(50000,0.01);
+	vector_dist_dlb_on_cuda_impl<CellList_gpu<3,vector_dist_gpu_test_real,
+		CudaMemory,shift_only<3,vector_dist_gpu_test_real>,false>, false>(50000,0.01);
 }
 
 BOOST_AUTO_TEST_CASE(vector_dist_dlb_on_cuda_sorted)
 {
-	vector_dist_dlb_on_cuda_impl<CellList_gpu<3,double,CudaMemory,shift_only<3,double>,false>, true>(50000,0.01);
+	vector_dist_dlb_on_cuda_impl<CellList_gpu<3,vector_dist_gpu_test_real,
+		CudaMemory,shift_only<3,vector_dist_gpu_test_real>,false>, true>(50000,0.01);
 }
 
 BOOST_AUTO_TEST_CASE(vector_dist_dlb_on_cuda_sparse)
 {
-	vector_dist_dlb_on_cuda_impl<CELLLIST_GPU_SPARSE<3,double>, false>(50000,0.01);
+	vector_dist_dlb_on_cuda_impl<CELLLIST_GPU_SPARSE<3,
+		vector_dist_gpu_test_real>, false>(50000,0.01);
 }
 
 BOOST_AUTO_TEST_CASE(vector_dist_dlb_on_cuda_sparse_sorted)
 {
-	vector_dist_dlb_on_cuda_impl<CELLLIST_GPU_SPARSE<3,double>, true>(50000,0.01);
+	vector_dist_dlb_on_cuda_impl<CELLLIST_GPU_SPARSE<3,
+		vector_dist_gpu_test_real>, true>(50000,0.01);
 }
 
 BOOST_AUTO_TEST_CASE(vector_dist_dlb_on_cuda2)
@@ -1383,7 +1443,8 @@ BOOST_AUTO_TEST_CASE(vector_dist_dlb_on_cuda2)
 	{return;};
 
 	#ifndef CUDA_ON_CPU
-	vector_dist_dlb_on_cuda_impl<CellList_gpu<3,double,CudaMemory,shift_only<3,double>,false>, false>(1000000,0.01);
+	vector_dist_dlb_on_cuda_impl<CellList_gpu<3,vector_dist_gpu_test_real,
+		CudaMemory,shift_only<3,vector_dist_gpu_test_real>,false>, false>(1000000,0.01);
 	#endif
 }
 
@@ -1393,22 +1454,25 @@ BOOST_AUTO_TEST_CASE(vector_dist_dlb_on_cuda3)
 	{return;}
 
 	#ifndef CUDA_ON_CPU
-	vector_dist_dlb_on_cuda_impl<CellList_gpu<3,double,CudaMemory,shift_only<3,double>,false>, false>(15000000,0.005);
+	vector_dist_dlb_on_cuda_impl<CellList_gpu<3,vector_dist_gpu_test_real,
+		CudaMemory,shift_only<3,vector_dist_gpu_test_real>,false>, false>(15000000,0.005);
 	#endif
 }
 
 
 BOOST_AUTO_TEST_CASE(vector_dist_keep_prop_on_cuda)
 {
-	typedef vector_dist_gpu<3,double,aggregate<double,double[3],double[3][3]>> vector_type;
+	typedef vector_dist_gpu<3,vector_dist_gpu_test_real,
+		aggregate<vector_dist_gpu_test_real,vector_dist_gpu_test_real[3],
+		vector_dist_gpu_test_real[3][3]>> vector_type;
 
 	Vcluster<> & vCluster = create_vcluster();
 
 	if (vCluster.getProcessingUnits() > 8)
 		return;
 
-	Box<3,double> domain({0.0,0.0,0.0},{1.0,1.0,1.0});
-	Ghost<3,double> g(0.1);
+	Box<3,vector_dist_gpu_test_real> domain({0.0,0.0,0.0},{1.0,1.0,1.0});
+	Ghost<3,vector_dist_gpu_test_real> g(0.1);
 	size_t bc[3] = {PERIODIC,PERIODIC,PERIODIC};
 
 	vector_type vecDist(0,domain,bc,g,DEC_GRAN(2048));
@@ -1421,9 +1485,12 @@ BOOST_AUTO_TEST_CASE(vector_dist_keep_prop_on_cuda)
 		{
 			vecDist.add();
 
-			vecDist.getLastPos()[0] = ((double)rand())/RAND_MAX * 0.3;
-			vecDist.getLastPos()[1] = ((double)rand())/RAND_MAX * 0.3;
-			vecDist.getLastPos()[2] = ((double)rand())/RAND_MAX * 0.3;
+			vecDist.getLastPos()[0] =
+				static_cast<vector_dist_gpu_test_real>(rand())/RAND_MAX * 0.3;
+			vecDist.getLastPos()[1] =
+				static_cast<vector_dist_gpu_test_real>(rand())/RAND_MAX * 0.3;
+			vecDist.getLastPos()[2] =
+				static_cast<vector_dist_gpu_test_real>(rand())/RAND_MAX * 0.3;
 		}
 	}
 
@@ -1496,7 +1563,7 @@ BOOST_AUTO_TEST_CASE(vector_dist_keep_prop_on_cuda)
 
 	BOOST_REQUIRE(vecDist.size_local() != 0);
 
-	Point<3,double> v({1.0,1.0,1.0});
+	Point<3,vector_dist_gpu_test_real> v({1.0,1.0,1.0});
 
 	int base = 0;
 
@@ -1633,8 +1700,8 @@ struct type_is_one
 
 BOOST_AUTO_TEST_CASE(vector_dist_get_index_set)
 {
-	Box<3,double> domain({0.0,0.0,0.0},{1.0,1.0,1.0});
-	Ghost<3,double> g(0.1);
+	Box<3,vector_dist_gpu_test_real> domain({0.0,0.0,0.0},{1.0,1.0,1.0});
+	Ghost<3,vector_dist_gpu_test_real> g(0.1);
 	size_t bc[3] = {PERIODIC,PERIODIC,PERIODIC};
 
 	if (create_vcluster().size() >= 16)
@@ -1642,7 +1709,8 @@ BOOST_AUTO_TEST_CASE(vector_dist_get_index_set)
 
 	Vcluster<> & vCluster = create_vcluster();
 
-	vector_dist_gpu<3,double,aggregate<int,double>> vdg(10000,domain,bc,g,DEC_GRAN(128));
+	vector_dist_gpu<3,vector_dist_gpu_test_real,
+		aggregate<int,vector_dist_gpu_test_real>> vdg(10000,domain,bc,g,DEC_GRAN(128));
 
 	auto it = vdg.getDomainIterator();
 
@@ -1650,13 +1718,15 @@ BOOST_AUTO_TEST_CASE(vector_dist_get_index_set)
 	{
 		auto p = it.get();
 
-		vdg.getPos(p)[0] = (double)rand() / RAND_MAX;
-		vdg.getPos(p)[1] = (double)rand() / RAND_MAX;
-		vdg.getPos(p)[2] = (double)rand() / RAND_MAX;
+		vdg.getPos(p)[0] = static_cast<vector_dist_gpu_test_real>(rand()) / RAND_MAX;
+		vdg.getPos(p)[1] = static_cast<vector_dist_gpu_test_real>(rand()) / RAND_MAX;
+		vdg.getPos(p)[2] = static_cast<vector_dist_gpu_test_real>(rand()) / RAND_MAX;
 
-		vdg.template getProp<0>(p) = (int)((double)rand() / RAND_MAX / 0.5);
+		vdg.template getProp<0>(p) = static_cast<int>(
+			static_cast<vector_dist_gpu_test_real>(rand()) / RAND_MAX / 0.5);
 
-		vdg.template getProp<1>(p) = (double)rand() / RAND_MAX;
+		vdg.template getProp<1>(p) =
+			static_cast<vector_dist_gpu_test_real>(rand()) / RAND_MAX;
 
 		++it;
 	}
@@ -1695,14 +1765,16 @@ BOOST_AUTO_TEST_CASE(vector_dist_get_index_set)
 
 BOOST_AUTO_TEST_CASE(vector_dist_compare_host_device)
 {
-	Box<3,double> domain({0.0,0.0,0.0},{1.0,1.0,1.0});
-	Ghost<3,double> g(0.1);
+	Box<3,vector_dist_gpu_test_real> domain({0.0,0.0,0.0},{1.0,1.0,1.0});
+	Ghost<3,vector_dist_gpu_test_real> g(0.1);
 	size_t bc[3] = {PERIODIC,PERIODIC,PERIODIC};
 
 	if (create_vcluster().size() >= 16)
 	{return;}
 
-	vector_dist_gpu<3,double,aggregate<double,double[3],double[3][3]>> vdg(10000,domain,bc,g,DEC_GRAN(128));
+	vector_dist_gpu<3,vector_dist_gpu_test_real,
+		aggregate<vector_dist_gpu_test_real,vector_dist_gpu_test_real[3],
+		vector_dist_gpu_test_real[3][3]>> vdg(10000,domain,bc,g,DEC_GRAN(128));
 
 	auto it = vdg.getDomainIterator();
 
@@ -1710,11 +1782,12 @@ BOOST_AUTO_TEST_CASE(vector_dist_compare_host_device)
 	{
 		auto p = it.get();
 
-		vdg.getPos(p)[0] = (double)rand() / RAND_MAX;
-		vdg.getPos(p)[1] = (double)rand() / RAND_MAX;
-		vdg.getPos(p)[2] = (double)rand() / RAND_MAX;
+		vdg.getPos(p)[0] = static_cast<vector_dist_gpu_test_real>(rand()) / RAND_MAX;
+		vdg.getPos(p)[1] = static_cast<vector_dist_gpu_test_real>(rand()) / RAND_MAX;
+		vdg.getPos(p)[2] = static_cast<vector_dist_gpu_test_real>(rand()) / RAND_MAX;
 
-		vdg.template getProp<0>(p) = (double)rand() / RAND_MAX;
+		vdg.template getProp<0>(p) =
+			static_cast<vector_dist_gpu_test_real>(rand()) / RAND_MAX;
 
 		vdg.template getProp<1>(p)[0] = (double)rand() / RAND_MAX;
 		vdg.template getProp<1>(p)[1] = (double)rand() / RAND_MAX;
@@ -1831,14 +1904,16 @@ __global__ void assign_to_ghost(vector_dist_type vds)
 
 BOOST_AUTO_TEST_CASE(vector_dist_domain_and_ghost_test)
 {
-        Box<3,double> domain({0.0,0.0,0.0},{1.0,1.0,1.0});
-        Ghost<3,double> g(0.1);
+        Box<3,vector_dist_gpu_test_real> domain({0.0,0.0,0.0},{1.0,1.0,1.0});
+        Ghost<3,vector_dist_gpu_test_real> g(0.1);
         size_t bc[3] = {PERIODIC,PERIODIC,PERIODIC};
 
         if (create_vcluster().size() >= 16)
         {return;}
 
-        vector_dist_gpu<3,double,aggregate<double,double[3],double[3][3]>> vdg(10000,domain,bc,g,DEC_GRAN(128));
+        vector_dist_gpu<3,vector_dist_gpu_test_real,
+                aggregate<vector_dist_gpu_test_real,vector_dist_gpu_test_real[3],
+                vector_dist_gpu_test_real[3][3]>> vdg(10000,domain,bc,g,DEC_GRAN(128));
 
         auto ite = vdg.getDomainAndGhostIteratorGPU();
 
@@ -1886,8 +1961,8 @@ __global__ void launch_overflow(vT vs, vT vs2)
 
 BOOST_AUTO_TEST_CASE(vector_dist_overflow_se_class1)
 {
-	Box<3,double> domain({0.0,0.0,0.0},{1.0,1.0,1.0});
-	Ghost<3,double> g(0.1);
+	Box<3,vector_dist_gpu_test_real> domain({0.0,0.0,0.0},{1.0,1.0,1.0});
+	Ghost<3,vector_dist_gpu_test_real> g(0.1);
 	size_t bc[3] = {PERIODIC,PERIODIC,PERIODIC};
 
 	if (create_vcluster().size() >= 16)
@@ -1895,8 +1970,11 @@ BOOST_AUTO_TEST_CASE(vector_dist_overflow_se_class1)
 
 	std::cout << "****** TEST ERROR MESSAGE BEGIN ********" << std::endl;
 
-	vector_dist_gpu<3,double,aggregate<double,double[3],double[3][3]>> vdg(0,domain,bc,g,DEC_GRAN(128));
-	vector_dist_gpu<3,double,aggregate<double,double[3],double[3][3]>> vdg2(0,domain,bc,g,DEC_GRAN(128));
+	using overflow_vector = vector_dist_gpu<3,vector_dist_gpu_test_real,
+		aggregate<vector_dist_gpu_test_real,vector_dist_gpu_test_real[3],
+		vector_dist_gpu_test_real[3][3]>>;
+	overflow_vector vdg(0,domain,bc,g,DEC_GRAN(128));
+	overflow_vector vdg2(0,domain,bc,g,DEC_GRAN(128));
 
 
 	vdg.setCapacity(100);
