@@ -72,6 +72,9 @@ Makefile
 *cmake*
 **/*cmake*
 **/*CMake*
+!src/cmake/
+!src/cmake/openfpm-config-components.cmake.in
+!src/cmake/openfpm-config.cmake.in
 
 **/.gitignore
 .gitignore

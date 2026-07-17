@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.8 FATAL_ERROR)
 ########################### Executables
 
 
-if(NOT CUDA_ON_BACKEND STREQUAL "None")
+if(NOT CUDA_ON_BACKEND STREQUAL "NONE")
 	set(CUDA_SOURCES 
 		Grid/tests/sgrid_dist_id_gpu_unit_tests.cu
 		Vector/cuda/vector_dist_gpu_MP_tests.cu
@@ -490,6 +490,11 @@ if(NOT DOBC EQUAL 1)
 	add_library(binary_config_ INTERFACE)
 	add_library(binary_config_shared INTERFACE)
 	add_library(binary_config_static INTERFACE)
+	if (ENABLE_NUMERICS)
+		add_library(openfpm_numerics_component INTERFACE)
+		set_target_properties(openfpm_numerics_component PROPERTIES
+			EXPORT_NAME numerics)
+	endif()
 
 	target_include_directories(
 		binary_config_
@@ -508,17 +513,43 @@ if(NOT DOBC EQUAL 1)
 		${LIBHILBERT_INCLUDE_DIRS}
 		${Vc_INCLUDE_DIR}
 		${Boost_INCLUDE_DIRS}
-		${MPI_C_INCLUDE_DIRS})
+		${MPI_C_INCLUDE_DIRS}
+		${MPI_CXX_INCLUDE_DIRS}
+		${MPI_C_COMPILER_INCLUDE_DIRS}
+		${MPI_CXX_COMPILER_INCLUDE_DIRS})
 
 	if (ENABLE_NUMERICS)
+		get_filename_component(_openfpm_minter_root "${MINTER_ROOT}" REALPATH)
 		target_include_directories(
 			binary_config_
 			INTERFACE
-			${CMAKE_INSTALL_PREFIX}/openfpm_numerics/include)
+			${CMAKE_INSTALL_PREFIX}/openfpm_numerics/include
+			${EIGEN3_INCLUDE_DIR}
+			${BLITZ_ROOT}/include
+			${ALGOIM_ROOT}/include
+			${_openfpm_minter_root}
+			${SuiteSparse_INCLUDE_DIRS}
+			${BLAS_INCLUDE_DIRS})
+		target_link_libraries(binary_config_ INTERFACE
+			${SuiteSparse_LIBRARIES} ${BLAS_LIBRARIES})
 	endif()
 
 	if (CUDA_ON_CPU)
 		target_compile_definitions(binary_config_ INTERFACE CUDA_ON_CPU)
+	endif()
+	if (CUDA_ON_BACKEND STREQUAL "OpenMP" AND TARGET OpenMP::OpenMP_CXX)
+		target_link_libraries(binary_config_ INTERFACE OpenMP::OpenMP_CXX)
+	endif()
+
+	if (CUDA_ON_BACKEND STREQUAL "METAL")
+		target_compile_features(binary_config_ INTERFACE cxx_std_17)
+		target_compile_definitions(binary_config_ INTERFACE
+			CUDIFY_USE_METAL CUDA_GPU)
+		target_include_directories(binary_config_ INTERFACE
+			${VULKAN_INCLUDE_DIR})
+		target_link_libraries(binary_config_ INTERFACE ${MOLTENVK_LIBRARY}
+			"-framework Foundation" "-framework QuartzCore"
+			"-framework Metal" "-framework IOSurface")
 	endif()
 
 	target_compile_options(binary_config_ INTERFACE $<$<COMPILE_LANGUAGE:CUDA>: ${WARNING_SUPPRESSION_AND_OPTION_NVCC} >)
@@ -536,6 +567,9 @@ if(NOT DOBC EQUAL 1)
 	target_link_libraries(binary_config_ INTERFACE ${Vc_LIBRARIES})
 	target_link_libraries(binary_config_ INTERFACE ${alpaka_LIBRARIES})
 	target_link_libraries(binary_config_ INTERFACE ${MPI_C_LIBRARIES})
+	if (TARGET MPI::MPI_CXX)
+		target_link_libraries(binary_config_ INTERFACE MPI::MPI_CXX)
+	endif()
 
 	# Not OK before CMake 3.13
 	#target_link_libraries(binary_config INTERFACE $<INSTALL_PREFIX>/openfpm_vcluster/lib/$<TARGET_FILE_NAME:openfpm::vcluster> )
@@ -549,6 +583,10 @@ if(NOT DOBC EQUAL 1)
 	target_link_libraries(binary_config_shared INTERFACE ${CMAKE_INSTALL_PREFIX}/openfpm_pdata/lib/libofpm_pdata_dl.so )
 
 	target_link_libraries(binary_config_ INTERFACE ${CUDA_LIBRARIES} )
+	if (TARGET openfpm_numerics_component)
+		target_link_libraries(openfpm_numerics_component INTERFACE
+			binary_config)
+	endif()
 
 	# Does not work before Cmake 3.13
 	#install(TARGETS binary_config vcluster ofpmmemory EXPORT openfpm_config  CONFIGURATIONS)
@@ -556,6 +594,10 @@ if(NOT DOBC EQUAL 1)
 	install(TARGETS binary_config_ EXPORT openfpm_config  CONFIGURATIONS)
 	install(TARGETS binary_config_static EXPORT openfpm_config  CONFIGURATIONS)
 	install(TARGETS binary_config_shared EXPORT openfpm_config  CONFIGURATIONS)
+	if (TARGET openfpm_numerics_component)
+		install(TARGETS openfpm_numerics_component EXPORT openfpm_config
+			CONFIGURATIONS)
+	endif()
 
 	include(CMakePackageConfigHelpers)
 	write_basic_package_version_file(
@@ -566,7 +608,7 @@ if(NOT DOBC EQUAL 1)
 	install(EXPORT openfpm_config
 		DESTINATION cmake/
 		NAMESPACE openfpm::
-		FILE openfpmConfig.cmake)
+		FILE openfpmTargets.cmake)
 
 	install(
 		FILES
@@ -579,5 +621,9 @@ if(NOT DOBC EQUAL 1)
 		"${CMAKE_CURRENT_SOURCE_DIR}/cmake/openfpmConfig-Vars.cmake"
 		DESTINATION
 		cmake/)
-endif()
 
+	install(
+		FILES "${CMAKE_CURRENT_SOURCE_DIR}/cmake/openfpm-config.cmake.in"
+		DESTINATION cmake/
+		RENAME openfpmConfig.cmake)
+endif()
