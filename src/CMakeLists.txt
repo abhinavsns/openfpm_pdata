@@ -601,7 +601,7 @@ if(NOT DOBC EQUAL 1)
 
 	include(CMakePackageConfigHelpers)
 	write_basic_package_version_file(
-		"${CMAKE_CURRENT_BINARY_DIR}/openfpm_cmake/openfpmConfigVersion.cmake"
+		"${OPENFPM_PACKAGE_CONFIG_BUILD_DIR}/openfpmConfigVersion.cmake"
 		VERSION ${openfpm_VERSION}
 		COMPATIBILITY AnyNewerVersion)
 
@@ -612,18 +612,17 @@ if(NOT DOBC EQUAL 1)
 
 	install(
 		FILES
-		"${CMAKE_CURRENT_BINARY_DIR}/openfpm_cmake/openfpmConfigVersion.cmake"
+		"${OPENFPM_PACKAGE_CONFIG_BUILD_DIR}/openfpmConfigVersion.cmake"
 		DESTINATION
 		cmake/)
 
 	install(
 		FILES
-		"${CMAKE_CURRENT_SOURCE_DIR}/cmake/openfpmConfig-Vars.cmake"
+		"${OPENFPM_CONFIG_VARS_FILE}"
 		DESTINATION
 		cmake/)
 
 	install(
-		FILES "${CMAKE_CURRENT_SOURCE_DIR}/cmake/openfpm-config.cmake.in"
-		DESTINATION cmake/
-		RENAME openfpmConfig.cmake)
+		FILES "${OPENFPM_CONFIG_FILE}"
+		DESTINATION cmake/)
 endif()
