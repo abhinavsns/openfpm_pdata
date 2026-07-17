@@ -623,6 +623,10 @@ if(NOT DOBC EQUAL 1)
 		cmake/)
 
 	install(
+		FILES "${CMAKE_CURRENT_SOURCE_DIR}/cmake/OpenFPMRun.cmake"
+		DESTINATION cmake/)
+
+	install(
 		FILES "${OPENFPM_CONFIG_FILE}"
 		DESTINATION cmake/)
 endif()

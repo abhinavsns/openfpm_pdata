@@ -1,11 +1,13 @@
 cmake_minimum_required(VERSION 3.8 FATAL_ERROR)
-project(openfpm_pdata LANGUAGES C CXX)
+project(openfpm_pdata VERSION 5.2.0 LANGUAGES C CXX)
 
 if (POLICY CMP0074)
 	cmake_policy(SET CMP0074 NEW)
 endif()
 
-set(openfpm_VERSION 5.0.0)
+if (NOT openfpm_VERSION)
+	set(openfpm_VERSION "${PROJECT_VERSION}")
+endif()
 
 if (METIS_FOUND)
 	set(DEFINE_HAVE_METIS "#define HAVE_METIS 1")
@@ -44,6 +46,56 @@ set(OPENFPM_CONFIG_VARS_CONTENT "${OPENFPM_CONFIG_VARS_CONTENT}\nif(NOT Boost_DI
 set(OPENFPM_CONFIG_VARS_CONTENT "${OPENFPM_CONFIG_VARS_CONTENT}\nfind_dependency(Boost 1.72 COMPONENTS context fiber filesystem iostreams program_options)")
 set(OPENFPM_CONFIG_VARS_CONTENT "${OPENFPM_CONFIG_VARS_CONTENT}\nif(NOT MPI_CXX_COMPILER)\n  set(MPI_CXX_COMPILER \"${MPI_CXX_COMPILER}\")\nendif()")
 set(OPENFPM_CONFIG_VARS_CONTENT "${OPENFPM_CONFIG_VARS_CONTENT}\nfind_dependency(MPI COMPONENTS CXX)")
+set(_openfpm_runtime_library_dirs
+	"${CMAKE_INSTALL_PREFIX}/openfpm_devices/lib"
+	"${CMAKE_INSTALL_PREFIX}/openfpm_vcluster/lib"
+	"${CMAKE_INSTALL_PREFIX}/openfpm_pdata/lib")
+set(_openfpm_runtime_libraries
+	${MPI_C_LIBRARIES}
+	${MPI_CXX_LIBRARIES}
+	${PARMETIS_LIBRARIES}
+	${HDF5_LIBRARIES}
+	${PETSC_LIBRARIES}
+	${SuiteSparse_LIBRARIES}
+	${Boost_LIBRARIES})
+set(_openfpm_mpi_root "")
+if (IS_ABSOLUTE "${MPI_CXX_COMPILER}")
+	get_filename_component(_openfpm_mpi_bindir "${MPI_CXX_COMPILER}" DIRECTORY)
+	get_filename_component(_openfpm_mpi_root "${_openfpm_mpi_bindir}" DIRECTORY)
+endif()
+foreach(_openfpm_runtime_library IN LISTS _openfpm_runtime_libraries)
+	if (IS_ABSOLUTE "${_openfpm_runtime_library}" AND
+		EXISTS "${_openfpm_runtime_library}" AND
+		NOT IS_DIRECTORY "${_openfpm_runtime_library}")
+		get_filename_component(_openfpm_runtime_library_dir
+			"${_openfpm_runtime_library}" DIRECTORY)
+		list(APPEND _openfpm_runtime_library_dirs
+			"${_openfpm_runtime_library_dir}")
+	endif()
+endforeach()
+foreach(_openfpm_runtime_root IN ITEMS
+	"${_openfpm_mpi_root}" "${MPI_HOME}" "${METIS_ROOT}" "${PARMETIS_ROOT}" "${HDF5_ROOT}"
+	"${PETSC_ROOT}" "${SUITESPARSE_ROOT}" "${OPENBLAS_ROOT}"
+	"${LIBHILBERT_ROOT}" "${BOOST_ROOT}")
+	if (_openfpm_runtime_root)
+		foreach(_openfpm_runtime_libdir IN ITEMS lib lib64)
+			if (IS_DIRECTORY
+				"${_openfpm_runtime_root}/${_openfpm_runtime_libdir}")
+				list(APPEND _openfpm_runtime_library_dirs
+					"${_openfpm_runtime_root}/${_openfpm_runtime_libdir}")
+			endif()
+		endforeach()
+	endif()
+endforeach()
+list(APPEND _openfpm_runtime_library_dirs
+	${Boost_LIBRARY_DIRS} ${LIBHILBERT_LIBRARY_DIRS})
+list(REMOVE_DUPLICATES _openfpm_runtime_library_dirs)
+set(OPENFPM_CONFIG_VARS_CONTENT
+	"${OPENFPM_CONFIG_VARS_CONTENT}\nset(OPENFPM_MPIEXEC_EXECUTABLE \"${MPIEXEC_EXECUTABLE}\")")
+set(OPENFPM_CONFIG_VARS_CONTENT
+	"${OPENFPM_CONFIG_VARS_CONTENT}\nset(OPENFPM_RUNTIME_LIBRARY_DIRS \"${_openfpm_runtime_library_dirs}\")")
+set(OPENFPM_CONFIG_VARS_CONTENT
+	"${OPENFPM_CONFIG_VARS_CONTENT}\ninclude(\"\${CMAKE_CURRENT_LIST_DIR}/OpenFPMRun.cmake\")")
 if (CUDA_ON_BACKEND STREQUAL "OpenMP")
 	set(OPENFPM_CONFIG_VARS_CONTENT "${OPENFPM_CONFIG_VARS_CONTENT}\nfind_dependency(OpenMP COMPONENTS CXX)")
 endif()
