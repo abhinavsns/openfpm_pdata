@@ -16,7 +16,8 @@ __global__ void move_parts_gpu_test(vector_dist_type vecDist)
 #pragma unroll
 	for (int i = 0 ; i < dim ; i++)
 	{
-		vecDist.getPos(p)[i] += 0.05;
+		vecDist.getPos(p)[i] +=
+			static_cast<typename vector_dist_type::stype>(0.05);
 	}
 }
 
@@ -66,7 +67,7 @@ __global__  void calculate_force(
 
 	auto it = cellList.getNNIteratorBox(cellList.getCell(xp));
 
-	Point<3,T> force({0.0,0.0,0.0});
+	Point<3,T> force({static_cast<T>(0),static_cast<T>(0),static_cast<T>(0)});
 
 	while (it.isNext())
 	{
@@ -77,7 +78,7 @@ __global__  void calculate_force(
 		Point<3,T> xq = vecDist.getPos(q);
 		Point<3,T> r = xq - xp;
 
-		if (r.norm() > 1e-6)
+		if (r.norm() > static_cast<T>(1e-6))
 		{
 			r /= r.norm();
 			force += vecDist.template getProp<0>(q)*r;
@@ -100,7 +101,7 @@ __global__  void calculate_force_sort(
 	size_t p; GET_PARTICLE_SORT(p, cellList);
 
 	Point<3,T> xp = vecDistSort.getPos(p);
-	Point<3,T> force({0.0,0.0,0.0});
+	Point<3,T> force({static_cast<T>(0),static_cast<T>(0),static_cast<T>(0)});
 
 	auto it = cellList.getNNIteratorBox(cellList.getCell(xp));
 
@@ -115,7 +116,7 @@ __global__  void calculate_force_sort(
 
 		// Normalize
 
-		if (r.norm() > 1e-6)
+		if (r.norm() > static_cast<T>(1e-6))
 		{
 			r /= r.norm();
 			force += vecDistSort.template getProp<0>(q)*r;
@@ -1884,21 +1885,23 @@ __global__ void assign_to_ghost(vector_dist_type vds)
 
 	if (i >= vds.size())	{return;}
 
-	vds.template getProp<0>(i) = 1000.0 + i;
+	using scalar_type = typename vector_dist_type::stype;
+	const scalar_type index = static_cast<scalar_type>(i);
+	vds.template getProp<0>(i) = static_cast<scalar_type>(1000) + index;
 
-	vds.template getProp<1>(i)[0] = 2000.0 + i;
-	vds.template getProp<1>(i)[1] = 3000.0 + i;
-	vds.template getProp<1>(i)[2] = 4000.0 + i;
+	vds.template getProp<1>(i)[0] = static_cast<scalar_type>(2000) + index;
+	vds.template getProp<1>(i)[1] = static_cast<scalar_type>(3000) + index;
+	vds.template getProp<1>(i)[2] = static_cast<scalar_type>(4000) + index;
 
-	vds.template getProp<2>(i)[0][0] = 12000.0 + i;
-	vds.template getProp<2>(i)[0][1] = 13000.0 + i;
-	vds.template getProp<2>(i)[0][2] = 14000.0 + i;
-	vds.template getProp<2>(i)[1][0] = 22000.0 + i;
-	vds.template getProp<2>(i)[1][1] = 23000.0 + i;
-	vds.template getProp<2>(i)[1][2] = 24000.0 + i;
-	vds.template getProp<2>(i)[2][0] = 32000.0 + i;
-	vds.template getProp<2>(i)[2][1] = 33000.0 + i;
-	vds.template getProp<2>(i)[2][2] = 34000.0 + i;
+	vds.template getProp<2>(i)[0][0] = static_cast<scalar_type>(12000) + index;
+	vds.template getProp<2>(i)[0][1] = static_cast<scalar_type>(13000) + index;
+	vds.template getProp<2>(i)[0][2] = static_cast<scalar_type>(14000) + index;
+	vds.template getProp<2>(i)[1][0] = static_cast<scalar_type>(22000) + index;
+	vds.template getProp<2>(i)[1][1] = static_cast<scalar_type>(23000) + index;
+	vds.template getProp<2>(i)[1][2] = static_cast<scalar_type>(24000) + index;
+	vds.template getProp<2>(i)[2][0] = static_cast<scalar_type>(32000) + index;
+	vds.template getProp<2>(i)[2][1] = static_cast<scalar_type>(33000) + index;
+	vds.template getProp<2>(i)[2][2] = static_cast<scalar_type>(34000) + index;
 
 }
 
